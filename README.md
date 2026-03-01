@@ -36,33 +36,25 @@ graph LR
 
 ```mermaid
 erDiagram
-    USERS ||--o{ ORDERS : "places"
-    USERS ||--o{ PORTFOLIOS : "owns"
-    STOCKS ||--o{ ORDERS : "referenced"
-    STOCKS ||--o{ PORTFOLIOS : "tracked"
+    MEMBER ||--o{ ORDER : "places"
+    STOCK ||--o{ ORDER : "included_in"
 
-    USERS {
-        long id PK
-        string email
-        string nickname
+    MEMBER {
+        long id PK "회원 식별자"
+        string name "이름"
+        long balance "계좌 잔고"
     }
-    STOCKS {
-        string stock_code PK "e.g. 005930"
-        string stock_name
+
+    STOCK {
+        string stock_code PK "종목코드 (ex. 005930)"
+        string stock_name "종목명"
     }
-    ORDERS {
-        long id PK
-        long user_id FK
-        string stock_code FK
-        decimal price
-        int quantity
-        string status "PENDING, COMPLETED, CANCELLED"
-        datetime created_at
-    }
-    PORTFOLIOS {
-        long id PK
-        long user_id FK
-        string stock_code FK
-        int total_quantity
-        decimal average_price
+
+    ORDER {
+        long id PK "주문 번호"
+        long member_id FK "회원 FK"
+        string stock_code FK "종목 FK"
+        long order_price "체결 가격"
+        int quantity "수량"
+        datetime order_time "주문 시간"
     }
