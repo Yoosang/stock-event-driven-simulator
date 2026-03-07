@@ -2,6 +2,7 @@ package com.example.simulator.domain.order;
 
 import com.example.simulator.domain.member.Member;
 import com.example.simulator.domain.member.MemberRepository;
+import com.example.simulator.domain.stock.PriceService;
 import com.example.simulator.domain.stock.Stock;
 import com.example.simulator.domain.stock.StockRepository;
 import org.junit.jupiter.api.DisplayName;
@@ -20,6 +21,7 @@ class OrderServiceTest {
     @Autowired MemberRepository memberRepository;
     @Autowired StockRepository stockRepository;
     @Autowired OrderRepository orderRepository;
+    @Autowired PriceService priceService;
 
     @Test
     @DisplayName("주문 완료")
@@ -30,22 +32,22 @@ class OrderServiceTest {
         Stock stock = Stock.createStock("stock001", "테스트종목");
         stockRepository.save(stock);
 
-        Long price = 10000L;
         int quantity = 5;
+        priceService.updatePrice("stock001", 50500L);
 
         //when
-        Long orderId = orderService.order(member.getId(), stock.getStockCode(), price, quantity);
+        Long orderId = orderService.order(member.getId(), stock.getStockCode(), quantity);
 
         //then
         Order getOrder = orderRepository.findById(orderId).orElseThrow();
 
         // 주문 상태 검증
-        assertEquals(price, getOrder.getOrderPrice(), "주문 가격이 일치해야 한다");
+        assertEquals(priceService.getLatestPrice("stock001"), getOrder.getOrderPrice(), "주문 가격이 일치해야 한다");
         assertEquals(quantity, getOrder.getQuantity(), "주문 수량이 일치해야 한다");
 
         // 잔액 차감 검증 (10만 원 - 7만 원 = 3만 원)
         Member updatedMember = memberRepository.findById(member.getId()).orElseThrow();
-        assertEquals(950000L, updatedMember.getBalance(), "잔액이 정상적으로 차감되어야 한다");
+        assertEquals(747500L, updatedMember.getBalance(), "잔액이 정상적으로 차감되어야 한다");
 
     }
 
@@ -59,9 +61,11 @@ class OrderServiceTest {
         Stock stock = Stock.createStock("stock002", "테스트종목2");
         stockRepository.save(stock);
 
+        priceService.updatePrice("stock002", 50500L);
+
         // When & Then (실행과 동시에 에러가 발생하는지 검증)
         assertThrows(IllegalArgumentException.class, () -> {
-            orderService.order(member.getId(), stock.getStockCode(), 50000L, 1);
+            orderService.order(member.getId(), stock.getStockCode(), 1);
         }, "잔액 부족 시 예외가 발생해야 한다");
     }
 }
