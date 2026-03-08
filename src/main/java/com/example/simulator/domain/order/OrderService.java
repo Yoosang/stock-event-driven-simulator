@@ -5,6 +5,7 @@ import com.example.simulator.domain.member.MemberRepository;
 import com.example.simulator.domain.stock.PriceService;
 import com.example.simulator.domain.stock.Stock;
 import com.example.simulator.domain.stock.StockRepository;
+import com.example.simulator.infra.OrderEventProducer;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,6 +18,7 @@ public class OrderService {
     private final StockRepository stockRepository;
     private final OrderRepository orderRepository;
     private final PriceService priceService;
+    private final OrderEventProducer orderEventProducer;
 
     // 현재가 주문
     @Transactional
@@ -35,6 +37,7 @@ public class OrderService {
 
         Order order = Order.createOrder(member, stock, currentPrice, quantity);
         orderRepository.save(order);
+        orderEventProducer.sendOrderEvent(order.getId(), member.getName(), stock.getStockName());
 
         return order.getId();
     }
