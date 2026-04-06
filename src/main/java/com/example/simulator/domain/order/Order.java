@@ -2,6 +2,7 @@ package com.example.simulator.domain.order;
 
 import com.example.simulator.domain.member.Member;
 import com.example.simulator.domain.stock.Stock;
+import com.example.simulator.infra.dto.OrderEvent;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -39,5 +40,17 @@ public class Order {
         order.quantity = quantity;
         order.orderTime = LocalDateTime.now();
         return order;
+    }
+
+    public OrderEvent toEvent() {
+        return new OrderEvent(
+                this.id,
+                this.member.getId(),
+                this.member.getName(),
+                this.stock.getStockCode(),
+                this.stock.getStockName(),
+                this.orderPrice,
+                this.quantity
+        );
     }
 }
