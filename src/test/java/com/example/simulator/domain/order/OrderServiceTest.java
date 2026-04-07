@@ -3,13 +3,17 @@ package com.example.simulator.domain.order;
 import com.example.simulator.domain.member.Member;
 import com.example.simulator.domain.member.MemberRepository;
 import com.example.simulator.domain.stock.PriceService;
+import com.example.simulator.domain.stock.RankingService;
 import com.example.simulator.domain.stock.Stock;
 import com.example.simulator.domain.stock.StockRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -22,6 +26,7 @@ class OrderServiceTest {
     @Autowired StockRepository stockRepository;
     @Autowired OrderRepository orderRepository;
     @Autowired PriceService priceService;
+    @Autowired RankingService rankingService;
 
     @Test
     @DisplayName("주문 완료")
@@ -67,5 +72,39 @@ class OrderServiceTest {
         assertThrows(IllegalArgumentException.class, () -> {
             orderService.order(member.getId(), stock.getStockCode(), 1);
         }, "잔액 부족 시 예외가 발생해야 한다");
+    }
+
+    @Test
+    @DisplayName("실시간 거래량 랭킹 테스트: 여러 종목 주문 시 Redis 정렬 확인")
+    void ranking_test() throws InterruptedException {
+        // 1. Given: 종목 준비 및 시세 주입
+        Stock samsung = Stock.createStock("005930", "삼성전자");
+        Stock hyundai = Stock.createStock("005380", "현대차");
+        stockRepository.save(samsung);
+        stockRepository.save(hyundai);
+
+        priceService.updatePrice(samsung.getStockCode(), 70000L);
+        priceService.updatePrice(hyundai.getStockCode(), 200000L);
+
+        Member member = Member.createMember("테스터", 5000000L);
+        memberRepository.save(member);
+
+        // 2. When: 서로 다른 수량으로 주문 실행
+        // 삼성전자 10주 (총 10), 현대차 20주 (총 20) -> 현대차가 1위여야 함
+        orderService.order(member.getId(), samsung.getStockCode(), 10);
+        orderService.order(member.getId(), hyundai.getStockCode(), 20);
+
+        // Kafka Consumer가 Redis 랭킹을 업데이트할 시간을 잠시 줍니다.
+        Thread.sleep(1500);
+
+        // 3. Then: Redis 랭킹 검증
+        Set<ZSetOperations.TypedTuple<Object>> topRanking = rankingService.getTopRanking();
+
+        // 랭킹 리스트의 첫 번째 요소가 '현대차'인지 확인
+        ZSetOperations.TypedTuple<Object> next = topRanking.iterator().next();
+
+        assertEquals("현대차", next.getValue(), "거래량이 더 많은 현대차가 1위여야 합니다.");
+
+        System.out.println("현재 1위 종목: " + next.getValue() + " (거래량: " + next.getScore() + ")");
     }
 }

@@ -9,7 +9,7 @@ import org.springframework.stereotype.Service;
 public class PriceService {
     private final RedisTemplate<String, Object> redisTemplate;
 
-    private static final String PRICE_KEY_PREFIX = "STOCK_PRICE:";
+    private static final String PRICE_KEY_PREFIX = "stock:price";
 
     // 시세 업데이트 (Key: STOCK_PRICE:005930, Value: 80000)
     public void updatePrice(String stockCode, Long price) {
