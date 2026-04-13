@@ -37,7 +37,7 @@ public class OrderService {
 
         Order order = Order.createOrder(member, stock, currentPrice, quantity);
         orderRepository.save(order);
-        orderEventProducer.sendOrderEvent(order.getId(), member.getName(), stock.getStockName());
+        orderEventProducer.sendOrderEvent(order.toEvent());
 
         return order.getId();
     }
